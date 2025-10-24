@@ -1,0 +1,25 @@
+pwd
+
+cd ..
+pwd
+
+cd Simple-Terminal/folder
+pwd
+
+cd 
+pwd
+
+ls
+mkdir d1 d2 d3
+rmdir d3
+rmdir *
+touch hello.txt
+cp folder/a.txt folder/ab.txt
+cp -r folder dir2
+rm dir2/ab.txt
+cat folder/a.txt
+cat folder/a.txt folder/ab.txt
+wc d3/t.txt
+zip myzip.zip tozip1.txt tozip2.txt tozip3.txt
+zip myzip2.zip d3
+unzip myzip2.zip -d unzip_myzip2

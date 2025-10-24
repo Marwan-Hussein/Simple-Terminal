@@ -145,8 +145,7 @@ public class Terminal {
         File toDir = new File(args[1]);
 
         // creating one if dest is not exists
-        if (!toDir.exists())
-            toDir.mkdirs();
+        if (!toDir.exists() || !fromDir.exists()){System.out.println("the folder you entered doesn't exists!");return;}
 
         File[] from_files = fromDir.listFiles();
         if (from_files == null || from_files.length == 0)
@@ -374,11 +373,11 @@ public class Terminal {
             System.out.println("Error: Usage: unzip archive.zip OR unzip archive.zip -d /path/to/destination/");
             return;
         }
-    
+
         try {
             String zipFileName = args[0];
             Path destPath = Paths.get(currentDirectory); // default to current directory
-        
+
             // Check for -d option
             if (args.length >= 3 && args[1].equals("-d")) {
                 destPath = Paths.get(args[2]);
@@ -386,28 +385,28 @@ public class Terminal {
                     destPath = Paths.get(currentDirectory).resolve(destPath);
                 }
             }
-        
+
             Path zipPath = Paths.get(zipFileName);
             if (!zipPath.isAbsolute()) {
                 zipPath = Paths.get(currentDirectory).resolve(zipPath);
             }
-        
+
             if (!Files.exists(zipPath)) {
                 System.out.println("Zip file not found: " + zipPath);
                 return;
             }
-        
+
             // Create destination directory if it doesn't exist
             Files.createDirectories(destPath);
-        
+
             try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipPath.toFile()))) {
                 ZipEntry zipEntry;
                 while ((zipEntry = zis.getNextEntry()) != null) {
                     Path newFile = destPath.resolve(zipEntry.getName());
-                    
+
                     // Create parent directories if needed
                     Files.createDirectories(newFile.getParent());
-                    
+
                     if (!zipEntry.isDirectory()) {
                         try (FileOutputStream fos = new FileOutputStream(newFile.toFile())) {
                             byte[] bytes = new byte[1024];
@@ -422,7 +421,7 @@ public class Terminal {
                     zis.closeEntry();
                 }
             }
-        
+
         } catch (IOException e) {
             System.out.println("Error extracting zip: " + e.getMessage());
         }
@@ -444,10 +443,10 @@ public class Terminal {
                 case "wc": wc(args); break;
                 case "zip": zip(args); break;
                 case "unzip": unzip(args); break;
-                default: System.out.println("Unknown command: " + command);
+                default: System.out.println("Unknown command: " + command+"\n");
             }
         } catch (Exception e) {
-            System.out.println("Error executing command: " + e.getMessage());
+            System.out.println("Error executing command: " + e.getMessage()+"\n");
         }
     }
 
@@ -456,7 +455,7 @@ public class Terminal {
         Terminal terminal = new Terminal();
 
         while (true) {
-            System.out.println("> ");
+            System.out.print("> ");
             String input = in.nextLine().trim();
 
             if(input.isEmpty()) continue;
