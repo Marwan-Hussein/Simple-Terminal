@@ -2,28 +2,33 @@ import java.util.*;
 import java.util.zip.*;
 import java.io.*;
 import java.nio.file.*;
-import java.util.Scanner;
-import java.util.zip.*;
-import java.io.*;
 
-import java.nio.file.Path;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-
+// person1: marwan
 class Parser {
     String commandName;
     String[] args;
 
     public boolean parse(String input) {
+        // getting command name
         int space_index = input.indexOf(' ', 0);
+
+        // in case the command needs no args
         if (space_index == -1) {
-            this.commandName = input.trim().toLowerCase();
+            this.commandName = input.toLowerCase();
             this.args = new String[0];
             return true;
         }
 
         this.commandName = input.substring(0, space_index).toLowerCase();
-        String arguments = input.substring(space_index + 1).trim();
+        int strtArgs = space_index+1;
+      
+        // in case cp -r
+        if(input.substring(0, space_index+3).toLowerCase().equals("cp -r")){
+            this.commandName = "cp -r";
+            strtArgs = space_index+3;
+        }
+
+        String arguments = input.substring(strtArgs).trim();
         this.args = arguments.split(" ");
         return true;
     }
@@ -129,20 +134,20 @@ public class Terminal {
         }
     }
 
+    // Person1: marwan
     public void cp_r(String[] args) throws IOException {
         File fromDir = new File(args[0]);
         File toDir = new File(args[1]);
 
-        if (!toDir.exists()) {
+        // creating one if dest is not exists
+        if (!toDir.exists())
             toDir.mkdirs();
-        }
 
         File[] from_files = fromDir.listFiles();
-        if (from_files == null || from_files.length == 0) {
-            System.out.println(args[0] + " is empty!");
+        if (from_files == null || from_files.length == 0)
             return;
-        }
 
+        // coping
         for (File f : from_files) {
             Path sourcePath = f.toPath();
             Path destPath = new File(toDir, f.getName()).toPath();
@@ -272,7 +277,7 @@ public class Terminal {
                 case "ls": ls(); break;
                 case "mkdir": mkdir(args); break;
                 case "rmdir": rmdir(args); break;
-                case "cp_r": cp_r(args); break;
+                case "cp -r": cp_r(args); break;
                 case "touch": touch(args); break;
                 case "rm": rm(args); break;
                 case "cp": cp(args); break;
