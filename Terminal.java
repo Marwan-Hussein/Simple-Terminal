@@ -456,7 +456,7 @@ public class Terminal {
         Terminal terminal = new Terminal();
 
         while (true) {
-            System.out.println("> ");
+            System.out.print("> ");
             String input = in.nextLine().trim();
 
             if(input.isEmpty()) continue;
