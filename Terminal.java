@@ -46,94 +46,161 @@ public class Terminal {
     static Parser parser = new Parser();
     static String currentDirectory = System.getProperty("user.dir");
 
+    //Abdullah
+    // 1. pwd - print the current directory
     public String pwd() {
         return currentDirectory;
     }
 
+    // 2. cd - supports no args, "..", relative and absolute paths
     public void cd(String[] args) {
         if (args.length == 0) {
-            currentDirectory = System.getProperty("user.dir");
+            // cd with no args - go to home directory
+            currentDirectory = System.getProperty("user.home");
             return;
         }
 
         String target = args[0];
+        Path candidate;
+
         if ("..".equals(target)) {
+            // Handle cd ..
             Path parent = Paths.get(currentDirectory).getParent();
-            if (parent != null) {
-                currentDirectory = parent.toString();
+            if (parent == null) {
+                // Already at root
+                System.out.println("Already at root directory.");
+            } else {
+                currentDirectory = parent.normalize().toString();
             }
-            return;
-        }
-
-        Path candidate = Paths.get(target);
-        if (!candidate.isAbsolute()) {
-            candidate = Paths.get(currentDirectory).resolve(target);
-        }
-        candidate = candidate.normalize();
-
-        if (Files.exists(candidate) && Files.isDirectory(candidate)) {
-            currentDirectory = candidate.toString();
         } else {
-            System.out.println("No such directory: " + candidate);
+            // Handle cd with path
+            candidate = Paths.get(target);
+            if (!candidate.isAbsolute()) {
+                // Convert relative path to absolute
+                candidate = Paths.get(currentDirectory).resolve(candidate);
+            }
+            candidate = candidate.normalize();
+            
+            if (Files.exists(candidate) && Files.isDirectory(candidate)) {
+                currentDirectory = candidate.toString();
+            } else {
+                System.out.println("No such directory: " + candidate);
+            }
         }
     }
 
+    // 3. ls - list contents sorted alphabetically
     public void ls() {
-        File[] files = new File(currentDirectory).listFiles();
-        if (files == null) return;
-        Arrays.sort(files);
+        File curr = new File(currentDirectory);
+        File[] files = curr.listFiles();
+        if (files == null) {
+            System.out.println("Cannot access directory: " + currentDirectory);
+            return;
+        }
+        
+        // Sort files alphabetically
+        Arrays.sort(files, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
+        
         for (File file : files) {
             System.out.println(file.getName());
         }
     }
 
+    // 4. mkdir - create one or more directories
     public void mkdir(String[] args) {
         if (args.length == 0) {
             System.out.println("Error: No directory name provided");
             return;
         }
+
         for (String arg : args) {
-            Path dirPath = Paths.get(arg);
-            if (!dirPath.isAbsolute()) {
-                dirPath = Paths.get(currentDirectory).resolve(dirPath);
+            Path candidate = Paths.get(arg);
+            if (!candidate.isAbsolute()) {
+                candidate = Paths.get(currentDirectory).resolve(candidate);
             }
+            candidate = candidate.normalize();
+
             try {
-                Files.createDirectories(dirPath);
+                Files.createDirectories(candidate);
+                System.out.println("Directory created: " + candidate.toString());
             } catch (IOException e) {
-                System.out.println("Error creating directory: " + e.getMessage());
+                System.out.println("Failed to create directory " + candidate.toString() + ": " + e.getMessage());
             }
         }
     }
 
+    // 5. rmdir - remove empty directories
     public void rmdir(String[] args) {
         if (args.length == 0) {
             System.out.println("Error: No directory name provided");
             return;
         }
-        if (args[0].equals("*")) {
-            File[] files = new File(currentDirectory).listFiles();
-            if (files == null) return;
+
+        String target = args[0];
+
+        if ("*".equals(target)) {
+            // Remove all empty directories in current directory
+            File currentDir = new File(currentDirectory);
+            File[] files = currentDir.listFiles();
+            if (files == null) {
+                System.out.println("Cannot access current directory: " + currentDirectory);
+                return;
+            }
+            
+            int removedCount = 0;
             for (File file : files) {
-                if (file.isDirectory() && file.list().length == 0) {
-                    file.delete();
+                if (file.isDirectory()) {
+                    File[] contents = file.listFiles();
+                    if (contents != null && contents.length == 0) {
+                        if (file.delete()) {
+                            removedCount++;
+                            System.out.println("Removed empty directory: " + file.getName());
+                        } else {
+                            System.out.println("Failed to remove directory: " + file.getPath());
+                        }
+                    }
                 }
+            }
+            if (removedCount == 0) {
+                System.out.println("No empty directories found to remove.");
             }
             return;
         }
 
-        Path dirPath = Paths.get(args[0]);
-        if (!dirPath.isAbsolute()) {
-            dirPath = Paths.get(currentDirectory).resolve(dirPath);
+        // Remove specific directory
+        Path candidate = Paths.get(target);
+        if (!candidate.isAbsolute()) {
+            candidate = Paths.get(currentDirectory).resolve(candidate);
+        }
+        candidate = candidate.normalize();
+
+        File dir = candidate.toFile();
+        if (!dir.exists()) {
+            System.out.println("No such directory: " + candidate);
+            return;
         }
 
-        File dir = dirPath.toFile();
-        if (dir.exists() && dir.isDirectory() && dir.list().length == 0) {
-            dir.delete();
+        if (!dir.isDirectory()) {
+            System.out.println("Path is not a directory: " + candidate);
+            return;
+        }
+
+        String[] contents = dir.list();
+        if (contents == null) {
+            System.out.println("Cannot access directory: " + candidate);
+            return;
+        }
+
+        if (contents.length == 0) {
+            if (dir.delete()) {
+                System.out.println("Removed directory: " + candidate);
+            } else {
+                System.out.println("Failed to remove directory: " + candidate);
+            }
         } else {
-            System.out.println("No such empty directory: " + dirPath);
+            System.out.println("Directory not empty: " + candidate);
         }
     }
-
     // Person1: marwan
     public void cp_r(String[] args) throws IOException {
         if (args.length < 2) {
