@@ -29,7 +29,7 @@ class Parser {
         }
 
         String arguments = input.substring(strtArgs).trim();
-        this.args = arguments.split(" ");
+        this.args = arguments.split("\\s+");
         return true;
     }
 
@@ -136,6 +136,11 @@ public class Terminal {
 
     // Person1: marwan
     public void cp_r(String[] args) throws IOException {
+        if (args.length < 2) {
+        System.out.println("Error: Usage: cp -r source_dir target_dir");
+        return;
+        }
+
         File fromDir = new File(args[0]);
         File toDir = new File(args[1]);
 
@@ -269,6 +274,160 @@ public class Terminal {
         }
     }
 
+    // marwan
+    public void zip(String[] args) {
+        if (args.length < 2) {
+            System.out.println("Error: Usage: zip archive.zip file1 file2 ... OR zip -r archive.zip directory/");
+            return;
+        }
+
+        try {
+            boolean recursive = false;
+            String zipFileName;
+            List<String> sources = new ArrayList<>();
+
+            // Check for -r flag
+            if (args[0].equals("-r") && args.length >= 3) {
+                recursive = true;
+                zipFileName = args[1];
+                sources = Arrays.asList(Arrays.copyOfRange(args, 2, args.length));
+            } else {
+                zipFileName = args[0];
+                sources = Arrays.asList(Arrays.copyOfRange(args, 1, args.length));
+            }
+
+            // Ensure .zip extension
+            if (!zipFileName.endsWith(".zip")) {
+                zipFileName += ".zip";
+            }
+
+            Path zipPath = Paths.get(zipFileName);
+            if (!zipPath.isAbsolute()) {
+                zipPath = Paths.get(currentDirectory).resolve(zipPath);
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(zipPath.toFile());
+                 ZipOutputStream zos = new ZipOutputStream(fos)) {
+
+                for (String source : sources) {
+                    Path sourcePath = Paths.get(source);
+                    if (!sourcePath.isAbsolute()) {
+                        sourcePath = Paths.get(currentDirectory).resolve(sourcePath);
+                    }
+
+                    File sourceFile = sourcePath.toFile();
+
+                    if (recursive && sourceFile.isDirectory()) {
+                        addDirectoryToZip(sourceFile, sourceFile.getName(), zos); // private method
+                    } else if (sourceFile.isFile()) {
+                        addFileToZip(sourceFile, sourceFile.getName(), zos); // private method
+                    } else if (sourceFile.isDirectory()) {
+                        // Add all files in directory (non-recursive)
+                        File[] files = sourceFile.listFiles();
+                        if (files != null) {
+                            for (File file : files) {
+                                if (file.isFile()) {
+                                    addFileToZip(file, sourceFile.getName() + "/" + file.getName(), zos);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        } catch (IOException e) {
+            System.out.println("Error creating zip: " + e.getMessage());
+        }
+    }
+
+    private void addFileToZip(File file, String entryName, ZipOutputStream zos) throws IOException {
+        try (FileInputStream fis = new FileInputStream(file)) {
+            ZipEntry zipEntry = new ZipEntry(entryName);
+            zos.putNextEntry(zipEntry);
+
+            byte[] bytes = new byte[1024];
+            int length;
+            while ((length = fis.read(bytes)) >= 0) {
+                zos.write(bytes, 0, length);
+            }
+            zos.closeEntry();
+        }
+    }
+
+    private void addDirectoryToZip(File directory, String basePath, ZipOutputStream zos) throws IOException {
+        File[] files = directory.listFiles();
+        if (files == null) return;
+
+        for (File file : files) {
+            if (file.isFile()) {
+                addFileToZip(file, basePath + "/" + file.getName(), zos);
+            } else if (file.isDirectory()) {
+                addDirectoryToZip(file, basePath + "/" + file.getName(), zos);
+            }
+        }
+    }
+
+
+    // marwan
+    public void unzip(String[] args) {
+        if (args.length == 0) {
+            System.out.println("Error: Usage: unzip archive.zip OR unzip archive.zip -d /path/to/destination/");
+            return;
+        }
+    
+        try {
+            String zipFileName = args[0];
+            Path destPath = Paths.get(currentDirectory); // default to current directory
+        
+            // Check for -d option
+            if (args.length >= 3 && args[1].equals("-d")) {
+                destPath = Paths.get(args[2]);
+                if (!destPath.isAbsolute()) {
+                    destPath = Paths.get(currentDirectory).resolve(destPath);
+                }
+            }
+        
+            Path zipPath = Paths.get(zipFileName);
+            if (!zipPath.isAbsolute()) {
+                zipPath = Paths.get(currentDirectory).resolve(zipPath);
+            }
+        
+            if (!Files.exists(zipPath)) {
+                System.out.println("Zip file not found: " + zipPath);
+                return;
+            }
+        
+            // Create destination directory if it doesn't exist
+            Files.createDirectories(destPath);
+        
+            try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipPath.toFile()))) {
+                ZipEntry zipEntry;
+                while ((zipEntry = zis.getNextEntry()) != null) {
+                    Path newFile = destPath.resolve(zipEntry.getName());
+                    
+                    // Create parent directories if needed
+                    Files.createDirectories(newFile.getParent());
+                    
+                    if (!zipEntry.isDirectory()) {
+                        try (FileOutputStream fos = new FileOutputStream(newFile.toFile())) {
+                            byte[] bytes = new byte[1024];
+                            int length;
+                            while ((length = zis.read(bytes)) >= 0) {
+                                fos.write(bytes, 0, length);
+                            }
+                        }
+                    } else {
+                        Files.createDirectories(newFile);
+                    }
+                    zis.closeEntry();
+                }
+            }
+        
+        } catch (IOException e) {
+            System.out.println("Error extracting zip: " + e.getMessage());
+        }
+}
+
     public void chooseCommandAction(String command, String[] args) {
         try {
             switch (command) {
@@ -283,6 +442,8 @@ public class Terminal {
                 case "cp": cp(args); break;
                 case "cat": cat(args); break;
                 case "wc": wc(args); break;
+                case "zip": zip(args); break;
+                case "unzip": unzip(args); break;
                 default: System.out.println("Unknown command: " + command);
             }
         } catch (Exception e) {
@@ -293,10 +454,18 @@ public class Terminal {
     public static void main(String[] args) {
         Scanner in = new Scanner(System.in);
         Terminal terminal = new Terminal();
+
         while (true) {
+            System.out.println("> ");
             String input = in.nextLine().trim();
+
+            if(input.isEmpty()) continue;
             if (input.equalsIgnoreCase("exit")) break;
-            if (!parser.parse(input)) continue;
+            if (!parser.parse(input)) {
+            System.out.println("Error: Invalid command format");
+            continue;
+            }
+
             terminal.chooseCommandAction(parser.getCommandName(), parser.getArgs());
         }
         in.close();
