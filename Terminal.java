@@ -7,8 +7,40 @@ import java.nio.file.*;
 class Parser {
     String commandName;
     String[] args;
+    private String redirectOperator; // ">" or ">>"
+    private String redirectFile;     // File name for redirection
 
     public boolean parse(String input) {
+        // Reset redirection fields
+        redirectOperator = null;
+        redirectFile = null;
+        
+        // Check for redirection operators
+        if (input.contains(" > ") || input.contains(" >> ")) {
+            // Handle redirection
+            String[] parts;
+            if (input.contains(" >> ")) {
+                parts = input.split(" >> ", 2);
+                redirectOperator = ">>";
+            } else {
+                parts = input.split(" > ", 2);
+                redirectOperator = ">";
+            }
+            
+            if (parts.length == 2) {
+                String commandPart = parts[0].trim();
+                redirectFile = parts[1].trim();
+                
+                // Parse the command part
+                return parseCommandPart(commandPart);
+            }
+        }
+        
+        // No redirection, parse normally
+        return parseCommandPart(input);
+    }
+    
+    private boolean parseCommandPart(String input) {
         // getting command name
         int space_index = input.indexOf(' ', 0);
 
@@ -39,6 +71,18 @@ class Parser {
 
     public String[] getArgs() {
         return this.args;
+    }
+    
+    public boolean hasRedirection() {
+        return redirectOperator != null && redirectFile != null;
+    }
+    
+    public String getRedirectOperator() {
+        return redirectOperator;
+    }
+    
+    public String getRedirectFile() {
+        return redirectFile;
     }
 }
 
@@ -492,28 +536,193 @@ public class Terminal {
         } catch (IOException e) {
             System.out.println("Error extracting zip: " + e.getMessage());
         }
-}
+    }
+    
+    
+    
+    // Execute command with output redirection
+    private void executeCommandWithRedirection(String command, String[] args) {
+        String redirectFile = parser.getRedirectFile();
+        boolean append = parser.getRedirectOperator().equals(">>");
+        
+        try {
+            // Resolve file path (handle relative and absolute paths)
+            Path filePath = Paths.get(redirectFile);
+            if (!filePath.isAbsolute()) {
+                filePath = Paths.get(currentDirectory).resolve(filePath);
+            }
+            filePath = filePath.normalize();
+            
+            // Create parent directories if they don't exist
+            Files.createDirectories(filePath.getParent());
+            
+            // Capture command output
+            String commandOutput = captureCommandOutput(command, args);
+            
+            // Write to file
+            try (FileWriter writer = new FileWriter(filePath.toFile(), append)) {
+                writer.write(commandOutput);
+                if (!commandOutput.endsWith("\n") && !commandOutput.isEmpty()) {
+                    writer.write("\n");
+                }
+                System.out.println("Output redirected to: " + filePath);
+            }
+            
+        } catch (IOException e) {
+            System.out.println("Error redirecting output to " + redirectFile + ": " + e.getMessage());
+        }
+    }
+
+    // Capture the output of a command as a string
+    private String captureCommandOutput(String commandName, String[] args) throws IOException {
+        StringBuilder output = new StringBuilder();
+        
+        switch (commandName) {
+            case "pwd":
+                output.append(pwd());
+                break;
+            case "ls":
+                output.append(captureLsOutput());
+                break;
+            case "wc":
+                output.append(captureWcOutput(args));
+                break;
+            case "cat":
+                output.append(captureCatOutput(args));
+                break;
+            default:
+                // For other commands, show warning and execute normally
+                System.out.println("Warning: Redirection not supported for command: " + commandName);
+                executeNormalCommand(commandName, args);
+                return "";
+        }
+        
+        return output.toString();
+    }
+    
+    // Add this method to capture cat output
+    private String captureCatOutput(String[] args) {
+        if (args.length == 0) {
+            return "Error: No file specified";
+        }
+        
+        StringBuilder content = new StringBuilder();
+        try {
+            if (args.length == 1) {
+                Path file = Paths.get(args[0]);
+                if (!file.isAbsolute()) file = Paths.get(currentDirectory).resolve(file);
+                if (Files.exists(file)) {
+                    content.append(new String(Files.readAllBytes(file)));
+                } else {
+                    return "No such file: " + file;
+                }
+            } else if (args.length == 2) {
+                // Concatenate two files
+                Path file1 = Paths.get(args[0]);
+                Path file2 = Paths.get(args[1]);
+                if (!file1.isAbsolute()) file1 = Paths.get(currentDirectory).resolve(file1);
+                if (!file2.isAbsolute()) file2 = Paths.get(currentDirectory).resolve(file2);
+                
+                if (Files.exists(file1)) {
+                    content.append(new String(Files.readAllBytes(file1)));
+                } else {
+                    content.append("No such file: ").append(file1).append("\n");
+                }
+                
+                if (Files.exists(file2)) {
+                    content.append(new String(Files.readAllBytes(file2)));
+                } else {
+                    content.append("No such file: ").append(file2).append("\n");
+                }
+            } else {
+                return "Too many arguments for cat command";
+            }
+        } catch (IOException e) {
+            return "Error reading file: " + e.getMessage();
+        }
+        
+        return content.toString();
+    }
+
+    // Capture ls output as string
+    private String captureLsOutput() {
+        StringBuilder output = new StringBuilder();
+        File curr = new File(currentDirectory);
+        File[] files = curr.listFiles();
+        
+        if (files == null) {
+            return "Cannot access directory: " + currentDirectory;
+        }
+        
+        Arrays.sort(files, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
+        for (File file : files) {
+            output.append(file.getName()).append("\n");
+        }
+        
+        // Remove trailing newline if present
+        if (output.length() > 0 && output.charAt(output.length() - 1) == '\n') {
+            output.setLength(output.length() - 1);
+        }
+        
+        return output.toString();
+    }
+
+   
+    // Capture wc output as string
+    private String captureWcOutput(String[] args) {
+        if (args.length == 0) {
+            return "Error: No file specified";
+        }
+        
+        try {
+            Path file = Paths.get(args[0]);
+            if (!file.isAbsolute()) file = Paths.get(currentDirectory).resolve(file);
+            if (!Files.exists(file)) {
+                return "No such file: " + file;
+            }
+            
+            long lines = 0, words = 0, chars = 0;
+            for (String line : Files.readAllLines(file)) {
+                lines++;
+                chars += line.length() + 1;
+                if (!line.trim().isEmpty()) words += line.trim().split("\\s+").length;
+            }
+            return lines + " " + words + " " + chars + " " + file.getFileName();
+        } catch (IOException e) {
+            return "Error reading file: " + e.getMessage();
+        }
+    }
 
     public void chooseCommandAction(String command, String[] args) {
         try {
-            switch (command) {
-                case "pwd": System.out.println(pwd()); break;
-                case "cd": cd(args); break;
-                case "ls": ls(); break;
-                case "mkdir": mkdir(args); break;
-                case "rmdir": rmdir(args); break;
-                case "cp -r": cp_r(args); break;
-                case "touch": touch(args); break;
-                case "rm": rm(args); break;
-                case "cp": cp(args); break;
-                case "cat": cat(args); break;
-                case "wc": wc(args); break;
-                case "zip": zip(args); break;
-                case "unzip": unzip(args); break;
-                default: System.out.println("Unknown command: " + command+"\n");
+            // Check if we have redirection
+            if (parser.hasRedirection()) {
+                executeCommandWithRedirection(command, args);
+            } else {
+                executeNormalCommand(command, args);
             }
         } catch (Exception e) {
             System.out.println("Error executing command: " + e.getMessage()+"\n");
+        }
+    }
+    
+    private void executeNormalCommand(String command, String[] args) throws IOException {
+        switch (command) {
+            case "pwd": System.out.println(pwd()); break; // the current path
+            case "cd": cd(args); break;                   // cd: home | cd ..: prev | cd path: goto path
+            case "ls": ls(); break;                       // list files in the dir
+            case "mkdir": mkdir(args); break;             // make directory
+            case "rmdir": rmdir(args); break;             // remove empty direcories
+            case "cp -r": cp_r(args); break;              // copy dir's 1 content and copy it to dir2
+            case "touch": touch(args); break;             // creates a file
+            case "rm": rm(args); break;                   // remove a file
+            case "cp": cp(args); break;                   // copy file's 1 content and copy it to file2 [replacement]
+            case "cat": cat(args); break;                 // print the content of a file
+            case "wc": wc(args); break;                   // #lines | #words | #chars | file_extension 
+            case "zip": zip(args); break;
+            case "unzip": unzip(args); break;
+            
+            default: System.out.println("Unknown command: " + command+"\n");
         }
     }
 
@@ -528,8 +737,8 @@ public class Terminal {
             if(input.isEmpty()) continue;
             if (input.equalsIgnoreCase("exit")) break;
             if (!parser.parse(input)) {
-            System.out.println("Error: Invalid command format");
-            continue;
+                System.out.println("Error: Invalid command format");
+                continue;
             }
 
             terminal.chooseCommandAction(parser.getCommandName(), parser.getArgs());
