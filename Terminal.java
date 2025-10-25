@@ -100,7 +100,7 @@ public class Terminal {
     public void cd(String[] args) {
         if (args.length == 0) {
             // cd with no args - go to home directory
-            currentDirectory = System.getProperty("user.home");
+            currentDirectory = System.getProperty("user.dir");
             return;
         }
 
