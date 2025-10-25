@@ -55,7 +55,7 @@ class Parser {
         int strtArgs = space_index+1;
       
         // in case cp -r
-        if(input.substring(0, space_index+3).toLowerCase().equals("cp -r")){
+        if(input.length() >= space_index + 3 &&input.substring(0, space_index+3).toLowerCase().equals("cp -r")){
             this.commandName = "cp -r";
             strtArgs = space_index+3;
         }
