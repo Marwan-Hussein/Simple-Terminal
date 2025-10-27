@@ -56,12 +56,12 @@ The CLI includes robust error handling. [cite\_start]If a user enters a wrong co
 
 This project was a collaborative effort. The following team members were responsible for the specified components:
 
-| Team Member           | Contribution                                                                                                                                                                                                                                                 |
+| Team Member           | Contribution                                                                                                                                                                                                                                                |
 | :-------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Marwan Hussein**    | Implemented the **`Parser`** class. Developed the `Terminal`'s main execution loop and `chooseCommandAction()`. Implemented the advanced **`cp -r`**, **`zip`**, and **`unzip`** commands. Handled the comprehensive **error handling** throughout the code. |
-| **Abdullah**          | Implemented the core file system commands: **`pwd`**, **`cd`**, **`ls`**, **`mkdir`**, and **`rmdir`**.                                                                                                                                                      |
-| **Mahmoud Abdelaziz** | Implemented file manipulation commands: **`touch`**, **`rm`**, **`cp`**, **`cat`**, and **`wc`**.                                                                                                                                                            |
-| **Sumaya Yousef**     | Implemented the output redirection commands: **`>`** and **`>>`**.                                                                                                                                                                                           |
+| [**Marwan Hussein**](www.linkedin.com/in/marawan-hussein-568373314)    | Implemented the **`Parser`** class. Developed the `Terminal`'s main execution loop and `chooseCommandAction()`. Implemented the advanced **`cp -r`**, **`zip`**, and **`unzip`** commands. Handled the comprehensive **error handling** throughout the code. |
+| [**Abdullah**](https://www.linkedin.com/in/sumaya-yousif-07b2b6376?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app)          | Implemented the core file system commands: **`pwd`**, **`cd`**, **`ls`**, **`mkdir`**, and **`rmdir`**.                                                                                                                                                      |
+| [**Mahmoud Abdelaziz**](https://www.linkedin.com/in/mahmoud-abdelaziz-240012347?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app) | Implemented file manipulation commands: **`touch`**, **`rm`**, **`cp`**, **`cat`**, and **`wc`**.                                                                                                                                                            |
+| [**Sumaya Yousef**](https://www.linkedin.com/in/sumaya-yousif-07b2b6376?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app)     | Implemented the output redirection commands: **`>`** and **`>>`**.                                                                                                                                                                                           |
 
 ---
 
@@ -90,6 +90,3 @@ This project was a collaborative effort. The following team members were respons
     >exit
     ```
 
----
-
-If you have any questions about specific command implementations or the project structure, feel free to ask\! Would you like me to elaborate on the implementation logic for any of the specific commands?
